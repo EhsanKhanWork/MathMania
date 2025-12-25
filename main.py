@@ -1,6 +1,6 @@
 import pygame 
 from main_menu import menu
-from gameplay import new_run_game
+from gameplay import run_game
 
 pygame.init()
 
@@ -10,7 +10,7 @@ def main():
 
         if choice == 'start':
             print("Debug: Start Hit")
-            new_run_game()
+            run_game()
 
         elif choice == 'quit':
             pygame.quit()

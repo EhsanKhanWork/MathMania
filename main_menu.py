@@ -1,7 +1,7 @@
 import pygame
 import sys
-
-from gameplay import new_run_game
+from gameplay import run_game
+from test import init_background, draw_background
 
 pygame.init()
 
@@ -10,9 +10,7 @@ def menu():
     width = 600
     height = 800
 
-    
-
-    screen = pygame.display.set_mode((width, height))
+    screen = pygame.display.set_mode((width, height), pygame.RESIZABLE)
     pygame.display.set_caption('Math Mania')
 
     black = (0, 0, 0)
@@ -22,10 +20,12 @@ def menu():
     title_font = pygame.font.SysFont('arialblack', 60)
     button_font = pygame.font.SysFont('arial', 26)
 
+    heli_img, heli_rect, heli_speed = init_background(height)
+
     class Button:
         def __init__(self, text, y):
             self.text = text
-            self.rect = pygame.Rect(width // 2 - 100, y, 200, 55)
+            self.rect = pygame.Rect(width // 2 - 150, y, 300, 80)
             self.color = black
         
         def draw(self, surf):
@@ -38,14 +38,17 @@ def menu():
 
 
     buttons = [ 
-        Button("Start", 300),
-        Button("Leaderboard", 380),
-        Button("Quit", 460)
+        Button("Start", 420),
+        Button("Leaderboard", 520),
+        Button("Quit", 620)
     ]
+
+    clock = pygame.time.Clock()
 
     running = True
     while running:
-        screen.fill(white)
+        clock.tick(60)
+        draw_background(screen, heli_img, heli_rect, heli_speed, width)
         
         mouse_pos = pygame.mouse.get_pos()
 

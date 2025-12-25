@@ -1,17 +1,29 @@
 import pygame 
 import os
 import random
-from loading import show_loading
 
 pygame.init()
 
+def new_run_game():
+    width = 1000 
+    height = 1200
+    screen = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("Maths Mania")
+
+    start_game()
+
+def start_game():
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
 
 def run_game():    
     
     playing_state = 1 
     gameover_state = 2 
-    pause_state = 3
 
     large_font = pygame.font.Font(None, 72)
     font = pygame.font.Font(None, 36)
@@ -31,25 +43,10 @@ def run_game():
             self.generate_new_problem()
 
         def generate_new_problem(self):
-            operation = random.choice(["+", "-", "*", "/"])
             num1 = random.randint(1, self.max_number)
             num2 = random.randint(1, self.max_number)
-
-            if operation == "+":
-                self.correct_answer = num1 + num2
-                self.current_problem = f"What is {num1} + {num2}?"
-            elif operation == "-":
-                num1 = max(num1, num2)
-                num2 = min(num1, num2)
-                self.correct_answer = num1 - num2
-                self.current_problem = f"What is {num1} - {num2}?"
-            elif operation == "*":
-                self.correct_answer = num1 * num2
-                self.current_problem = f"What is {num1} x {num2}?"
-            elif operation == "/":
-                self.correct_answer = num1
-                num1 = num1 * num2
-                self.current_problem = f"What is {num1} ÷ {num2}?"
+            self.correct_answer = num1 + num2
+            self.current_problem = f"What is {num1} + {num2}?"
 
         def generate_distractors(self, num_distractors=2):
             distractors = set()
@@ -72,35 +69,18 @@ def run_game():
     black = (0, 0, 0)
     green = (0, 255, 0)
     red = (255, 0, 0) # Added color for correct answer
-    overlay = (black)
-    panel_color = (white)
 
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Math Mania")
 
-    show_loading(screen, width, height)
-    pygame.time.delay(1000)
-
     font = pygame.font.Font(None, 36)
     answer_font = pygame.font.Font(None, 30)
 
-    time_limit = 5
-    question_timer = pygame.time.get_ticks()
-    paused_time = 0
-    pause_start_time = 0
 
     image = pygame.image.load(os.path.join('assets/helicopter.png'))
     helicopter_image = pygame.transform.scale(image, (100, 100))
+
     background = pygame.image.load(os.path.join('assets/background.jpg'))
-
-    jump_sound = pygame.mixer.Sound(os.path.join("assets/fahhh.wav"))
-    
-    pause_button = pygame.image.load(os.path.join('assets/pause.png'))
-    pause_button = pygame.transform.scale(pause_button, (50, 50))
-
-    pause_rect = pause_button.get_rect()
-    pause_rect.top = 10
-    pause_rect.right = width - 10
 
     player_rect = helicopter_image.get_rect()
     player_rect.x = 150
@@ -149,20 +129,13 @@ def run_game():
         restart_text = font.render("Press SPACE to Try Again", True, white)
         screen.blit(restart_text, (width // 2 - restart_text.get_width() // 2, height // 2 + 100))
 
-        menu_text = font.render("Press M for Main Menu", True, white)
-        screen.blit(menu_text, (width // 2 - menu_text.get_width() // 2, height // 2 + 150))
-
         pygame.display.flip()
-    
 
     def next_level():
-        nonlocal math_manager, platforms, question_timer
-        nonlocal player_vel_x, player_vel_y, grounded
+        global math_manager, platforms
         
         math_manager.generate_new_problem()
         platforms = generate_platforms(math_manager)
-
-        question_timer = pygame.time.get_ticks()
 
         player_rect.x = 150
         player_rect.bottom = floor_height
@@ -171,40 +144,13 @@ def run_game():
         grounded = True
 
     def reset_game():
-        nonlocal score, game_state, question_timer
-        nonlocal player_vel_y, player_vel_x, grounded
+        global score, game_state, player_rect, player_vel_y, player_vel_x, grounded
 
         score = 0 
         game_state = playing_state
-        question_timer = pygame.time.get_ticks()
         
         next_level()
 
-    def pause_menu():
-        overlay = pygame.Surface((width, height))
-        overlay.set_alpha(150)
-        overlay.fill((0, 0, 0))
-        screen.blit(overlay, (0, 0))
-
-        panel = pygame.Rect(50, 200, width - 100, 300)
-        pygame.draw.rect(screen, panel_color, panel, border_radius=25)
-        pygame.draw.rect(screen, black, panel, 2, border_radius=25)
-
-        title = large_font.render("Paused", True, black)
-        screen.blit(title, title.get_rect(center=(width // 2, panel.y + 60)))
-
-        resume_btn = pygame.Rect(panel.x + 40, panel.y + 140, panel.width - 80, 50)
-        menu_btn = pygame.Rect(panel.x + 40, panel.y + 210, panel.width - 80, 50)
-
-        mouse_pos = pygame.mouse.get_pos()
-
-        for btn, text in [(resume_btn, "Resume", ), (menu_btn, 'Main Menu')]:
-            pygame.draw.rect(screen, panel_color, btn, border_radius=12)
-            pygame.draw.rect(screen, panel_color, btn, border_radius=12)
-            txt = font.render(text, True, black)
-            screen.blit(txt, txt.get_rect(center=btn.center))
-
-        return menu_btn, resume_btn
 
     score = 0
     math_manager = MathManager(max_number=10)
@@ -219,11 +165,11 @@ def run_game():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return 'quit'
+                running = False
             
             if event.type == pygame.KEYDOWN:
                 if game_state == playing_state:
-                    if event.key == pygame.K_SPACE and grounded:
+                    if event.key == pygame.K_SPACE and player_vel_y == 0:
                         player_vel_y = -15
                     if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                         player_vel_x = -speed
@@ -233,8 +179,6 @@ def run_game():
                 elif game_state == gameover_state:
                     if event.key == pygame.K_SPACE:
                         reset_game()
-                    if event.key == pygame.K_m:
-                        return 'menu'
 
             if event.type == pygame.KEYUP and game_state == playing_state:
                 if event.key == pygame.K_LEFT or event.key == pygame.K_a:
@@ -243,21 +187,7 @@ def run_game():
                 if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     if player_vel_x > 0:
                         player_vel_x = 0
-            
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if game_state == playing_state and pause_rect.collidepoint(event.pos):
-                    game_state = pause_state
-                    paused_time += pygame.time.get_ticks() - pause_start_time
-
-                elif game_state == pause_state:
-                    menu_btn, resume_btn = pause_menu()
-
-                    if resume_btn.collidepoint(event.pos):
-                        game_state = playing_state
-
-                    elif menu_btn.collidepoint(event.pos):
-                        return 'menu'
-
+        
         if game_state == playing_state:
             prev_player_bottom = player_rect.bottom
             grounded = False
@@ -266,11 +196,6 @@ def run_game():
             player_rect.y += player_vel_y
             player_rect.x += player_vel_x
 
-            current_time = pygame.time.get_ticks()
-            elapsed_time = (current_time - question_timer - paused_time) / 1000
-
-            if elapsed_time >= time_limit:
-                game_state = gameover_state
 
             for platform in platforms:
                 # Collision check: Landing on top of a platform
@@ -287,8 +212,6 @@ def run_game():
                             player_vel_y = -8
                             grounded = False
                             
-                            pygame.mixer.Sound.play(jump_sound)
-                            pygame.mixer.music.stop()
                             # Crucial Fix: Exit the platform loop immediately
                             # to prevent collision with the new platforms in this frame.
                             break 
@@ -323,23 +246,15 @@ def run_game():
             screen.fill(black)
 
             # Draw elements
-            screen.blit(background, (0, 0))
-            screen.blit(pause_button, pause_rect)
-            
             problem_text = font.render(math_manager.current_problem, True, white)
             screen.blit(problem_text, (width // 2 - problem_text.get_width() // 2, 50))
-            
             score_text = font.render(f"Score: {score}", True, white)
             screen.blit(score_text, (10, 10))
-           
-            time_left = max(0, time_limit - elapsed_time)
-            timer_text = font.render(f"Time:{int(time_left)}", True, black)
-            timer_rect = timer_text.get_rect(center=(width // 2, 15))
-            screen.blit(timer_text, timer_rect)
 
             for platform in platforms:
                 # Added visual difference for correct platform
-                pygame.draw.rect(screen, white, platform)
+                platform_color = green if platform.correct else white 
+                pygame.draw.rect(screen, platform_color, platform)
 
                 answer_val_text = answer_font.render(str(platform.value), True, black)
                 screen.blit(answer_val_text, (platform.centerx - answer_val_text.get_width() // 2, platform.centery - answer_val_text.get_height() // 2))
@@ -354,30 +269,5 @@ def run_game():
 
         elif game_state == gameover_state: 
             draw_game_over_screen(screen, score, large_font, font, width, height)
-
-        elif game_state == pause_state:
-
-            screen.blit(background, (0, 0))
-            screen.blit(pause_button, pause_rect)
-
-            problem_text = font.render(math_manager.current_problem, True, white)
-            screen.blit(problem_text, (width // 2 - problem_text.get_width() // 2, 50))
-
-            score_text = font.render(f"Score: {score}", True, white)
-            screen.blit(score_text, (10, 10))
-
-            for platform in platforms:
-                # Added visual difference for correct platform
-                pygame.draw.rect(screen, white, platform)
-
-                answer_val_text = answer_font.render(str(platform.value), True, black)
-                screen.blit(answer_val_text, (platform.centerx - answer_val_text.get_width() // 2, platform.centery - answer_val_text.get_height() // 2))
-
-            blit_rect = player_rect.copy()
-            blit_rect.y += visual_offset
-            screen.blit(helicopter_image, blit_rect)
-
-            pause_menu()
-            pygame.display.flip()
 
     pygame.quit()
