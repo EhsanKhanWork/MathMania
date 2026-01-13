@@ -5,8 +5,6 @@ from loading import show_loading
 
 pygame.init()
 
-
-
 def run_game():    
     
     playing_state = 1 
@@ -89,12 +87,15 @@ def run_game():
     paused_time = 0
     pause_start_time = 0
 
+    highscore = "save.txt"
+
     image = pygame.image.load(os.path.join('assets/helicopter.png'))
     helicopter_image = pygame.transform.scale(image, (100, 100))
     background = pygame.image.load(os.path.join('assets/background.jpg'))
 
-    jump_sound = pygame.mixer.Sound(os.path.join("assets/fahhh.wav"))
-    
+    jump_sound = pygame.mixer.Sound(os.path.join("assets/this.mp3"))
+    this_sound = pygame.mixer.Sound(os.path.join("assets/fahhh.wav"))
+   
     pause_button = pygame.image.load(os.path.join('assets/pause.png'))
     pause_button = pygame.transform.scale(pause_button, (50, 50))
 
@@ -279,6 +280,9 @@ def run_game():
                         
                         if platform.correct:
 
+                            pygame.mixer.Sound.play(this_sound)
+                            pygame.mixer.music.stop()
+
                             score += 10
                             print(f"Correct! Score {score}")
                             
@@ -286,20 +290,17 @@ def run_game():
                             
                             player_vel_y = -8
                             grounded = False
-                            
-                            pygame.mixer.Sound.play(jump_sound)
-                            pygame.mixer.music.stop()
-                            # Crucial Fix: Exit the platform loop immediately
-                            # to prevent collision with the new platforms in this frame.
+                        
                             break 
-                            # -------------------------
+                        
                         else:
                             print("Incorrect! Game Over.")
                             game_state = gameover_state
+                            pygame.mixer.Sound.play(jump_sound)
+                            pygame.mixer.music.stop()
                             continue
 
-                    # Normal landing logic (applies only if not transitioning to next level)
-                    # Note: This block is now skipped if 'break' is executed above.
+                    
                     if prev_player_bottom <= platform.top:
                         player_rect.bottom = platform.top 
                         player_vel_y = 0

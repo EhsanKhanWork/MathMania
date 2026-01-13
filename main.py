@@ -2,6 +2,7 @@ import pygame
 from main_menu import menu
 from gameplay import run_game
 
+
 pygame.init()
 
 def main():
@@ -13,8 +14,12 @@ def main():
             run_game()
 
         elif choice == 'quit':
+
             pygame.quit()
             return
+
+        elif choice == 'menu':
+            menu()
 
 if __name__ == "__main__":
     main()
