@@ -1,27 +1,29 @@
-# Imports
-import pygame, sys, threading, os
+import pygame
 
 pygame.init()
+screen = pygame.display.set_mode((400, 300))
+font = pygame.font.SysFont("Arial", 24)
 
+# 1. Define the box (rect)
+box_rect = pygame.Rect(100, 100, 200, 50)
 
-def show_bye(screen, width, height):
-	
-    bye = pygame.mixer.Sound(os.path.join('assets/bye.mp3'))
+# 2. Render the text surface
+text_surface = font.render("Hello World!", True, (255, 255, 255))
 
-    pygame.mixer.Sound.play(bye)
-    pygame.mixer.Sound.stop(bye)
+# 3. Center the text in the box
+text_rect = text_surface.get_rect(center=box_rect.center)
 
-    font = pygame.font.Font(None, 50)
-    small_font = pygame.font.Font(None, 28)
-
-    screen.fill((0, 0, 0))
-
-    title = font.render("Math Mania", True, (255, 255, 255))
-    loading = small_font.render("Bye Bye", True, (200, 200, 200))
-
-    screen.blit(title, title.get_rect(center=(width // 2, height // 2 - 40)))
-    screen.blit(loading, loading.get_rect(center=(width // 2, height // 2 + 20)))
-
-
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+    
+    screen.fill((30, 30, 30))
+    
+    # Draw the box and then the text
+    pygame.draw.rect(screen, (0, 128, 255), box_rect)
+    screen.blit(text_surface, text_rect)
+    
     pygame.display.flip()
-
+pygame.quit()

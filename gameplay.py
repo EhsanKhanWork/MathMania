@@ -1,9 +1,22 @@
 import pygame 
 import os
 import random
+import json
 from loading import show_loading
+from os import path
 
 pygame.init()
+
+def load_highscore():
+    try:
+        with open("highscores.json", "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def save_highscore(scores):
+    with open("highscores.json", "w") as f:
+        json.dump(scores, f)
 
 def run_game():    
     
@@ -26,9 +39,9 @@ def run_game():
             self.max_number = max_number
             self.current_problem = ""
             self.correct_answer = 0
-            self.generate_new_problem()
+            self.generate_problem()
 
-        def generate_new_problem(self):
+        def generate_problem(self):
             operation = random.choice(["+", "-", "*", "/"])
             num1 = random.randint(1, self.max_number)
             num2 = random.randint(1, self.max_number)
@@ -57,19 +70,16 @@ def run_game():
                     distractors.add(d)
             return list(distractors)
         
-        def generate_answers_list(self, num_platforms=3):
+        def answers_list(self, num_platforms=3):
             distractors = self.generate_distractors(num_platforms - 1)
             answers = [self.correct_answer] + distractors
             random.shuffle(answers)
             return answers
 
-    # List of Variables ------------------------------------
     width = 600 
     height = 800
     white = (255, 255, 255)
     black = (0, 0, 0)
-    green = (0, 255, 0)
-    red = (255, 0, 0) # Added color for correct answer
     overlay = (black)
     panel_color = (white)
 
@@ -87,7 +97,6 @@ def run_game():
     paused_time = 0
     pause_start_time = 0
 
-    highscore = "save.txt"
 
     image = pygame.image.load(os.path.join('assets/helicopter.png'))
     helicopter_image = pygame.transform.scale(image, (100, 100))
@@ -107,8 +116,6 @@ def run_game():
     player_rect.x = 150
     floor_height = 750
     player_rect.y = 500
-
-
     player_rect.bottom = 550
     player_vel_y = 0
     GRAVITY = 0.4
@@ -126,7 +133,7 @@ def run_game():
         platform_list = []
         platform_y = 550
         platforms_specs = [(450, 100, 20), (250, 100, 20), (50, 100, 20)]
-        answers = math_manager.generate_answers_list(num_platforms)
+        answers = math_manager.answers_list(num_platforms)
 
         platform_data = list(zip(platforms_specs, answers))
         
@@ -136,9 +143,9 @@ def run_game():
             platform_list.append(Platform(x, platform_y, w, h, answer_val, correct))
 
         return platform_list
-    # ----------------------------------------------------
 
-    def draw_game_over_screen(screen, score, large_font, font, width, height):
+    def game_over_screen(screen, score, large_font, font, width, height):
+        nonlocal highscore
         screen.fill(black)
 
         game_over_text = large_font.render("Game Over", True, white)
@@ -146,6 +153,18 @@ def run_game():
 
         score_text = large_font.render(f"Final Score: {score}", True, white)
         screen.blit(score_text, (width // 2 - score_text.get_width() // 2, height // 4 + 80))
+
+        # Check for new highscore
+        if not highscore or len(highscore) < 5 or score > min(highscore):
+            highscore.append(score)
+            highscore.sort(reverse=True)
+            highscore = highscore[:5]
+            save_highscore(highscore)
+            highscore_text = large_font.render(f"New Highscore: {score}!", True, (255, 255, 0))  # Yellow for new highscore
+        else:
+            highscore_text = large_font.render(f"Highscore: {highscore[0] if highscore else 0}", True, white)
+        
+        screen.blit(highscore_text, (width // 2 - highscore_text.get_width() // 2, height // 4 + 160))
 
         restart_text = font.render("Press SPACE to Try Again", True, white)
         screen.blit(restart_text, (width // 2 - restart_text.get_width() // 2, height // 2 + 100))
@@ -160,7 +179,7 @@ def run_game():
         nonlocal math_manager, platforms, question_timer
         nonlocal player_vel_x, player_vel_y, grounded
         
-        math_manager.generate_new_problem()
+        math_manager.generate_problem()
         platforms = generate_platforms(math_manager)
 
         question_timer = pygame.time.get_ticks()
@@ -208,6 +227,7 @@ def run_game():
         return menu_btn, resume_btn
 
     score = 0
+    highscore = load_highscore()
     math_manager = MathManager(max_number=10)
     platforms = generate_platforms(math_manager)
     game_state = playing_state
@@ -237,7 +257,8 @@ def run_game():
                     if event.key == pygame.K_m:
                         return 'menu'
 
-            if event.type == pygame.KEYUP and game_state == playing_state:
+            if event.type == pygame.KEYUP and game_state == playing_state:   
+                # Prevents continuous movement when key is released
                 if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                     if player_vel_x < 0:
                         player_vel_x = 0
@@ -246,16 +267,17 @@ def run_game():
                         player_vel_x = 0
             
             if event.type == pygame.MOUSEBUTTONDOWN:
+            # Pause button click handling
                 if game_state == playing_state and pause_rect.collidepoint(event.pos):
                     game_state = pause_state
                     paused_time += pygame.time.get_ticks() - pause_start_time
-
+            # Resume or Menu button click handling
                 elif game_state == pause_state:
                     menu_btn, resume_btn = pause_menu()
-
+            #   Resume button   
                     if resume_btn.collidepoint(event.pos):
                         game_state = playing_state
-
+                    # Menu button
                     elif menu_btn.collidepoint(event.pos):
                         return 'menu'
 
@@ -274,7 +296,7 @@ def run_game():
                 game_state = gameover_state
 
             for platform in platforms:
-                # Collision check: Landing on top of a platform
+              
                 if player_rect.colliderect(platform) and player_vel_y >= 0:
                     if prev_player_bottom <= platform.top:
                         
@@ -286,7 +308,7 @@ def run_game():
                             score += 10
                             print(f"Correct! Score {score}")
                             
-                            next_level() # Generate new platforms
+                            next_level() # Move to next level
                             
                             player_vel_y = -8
                             grounded = False
@@ -294,7 +316,7 @@ def run_game():
                             break 
                         
                         else:
-                            print("Incorrect! Game Over.")
+                            print("Game Over.")
                             game_state = gameover_state
                             pygame.mixer.Sound.play(jump_sound)
                             pygame.mixer.music.stop()
@@ -333,6 +355,9 @@ def run_game():
             score_text = font.render(f"Score: {score}", True, white)
             screen.blit(score_text, (10, 10))
            
+            highscore_text = font.render(f"Highscore: {highscore[0] if highscore else 0}", True, white)
+            screen.blit(highscore_text, (10, 40))
+           
             time_left = max(0, time_limit - elapsed_time)
             timer_text = font.render(f"Time:{int(time_left)}", True, black)
             timer_rect = timer_text.get_rect(center=(width // 2, 15))
@@ -354,7 +379,7 @@ def run_game():
             pygame.display.flip()
 
         elif game_state == gameover_state: 
-            draw_game_over_screen(screen, score, large_font, font, width, height)
+            game_over_screen(screen, score, large_font, font, width, height)
 
         elif game_state == pause_state:
 
@@ -366,6 +391,9 @@ def run_game():
 
             score_text = font.render(f"Score: {score}", True, white)
             screen.blit(score_text, (10, 10))
+
+            highscore_text = font.render(f"Highscore: {highscore[0] if highscore else 0}", True, white)
+            screen.blit(highscore_text, (10, 40))
 
             for platform in platforms:
                 # Added visual difference for correct platform
