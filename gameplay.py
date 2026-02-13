@@ -1,24 +1,28 @@
 import pygame 
 import os
 import random
-import json
 from loading import show_loading
 from os import path
 
 pygame.init()
 
 def load_highscore():
-    try:
-        with open("highscores.json", "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
+    with open("save.txt", "r") as f:
+        return int(f.read())
 
-def save_highscore(scores):
-    with open("highscores.json", "w") as f:
-        json.dump(scores, f)
+def save_highscore(score):
+    with open("save.txt", "w") as f:
+        f.write(str(score))
 
-def run_game():    
+def load_time():
+    with open("time.txt", "r") as f:
+        return int(f.read())
+
+def save_time(time):
+    with open("time.txt", "w") as f:
+        f.write(str(time))
+
+def run_game(difficulty):    
     
     playing_state = 1 
     gameover_state = 2 
@@ -89,6 +93,8 @@ def run_game():
     show_loading(screen, width, height)
     pygame.time.delay(1000)
 
+    start_time = pygame.time.get_ticks()
+
     font = pygame.font.Font(None, 36)
     answer_font = pygame.font.Font(None, 30)
 
@@ -136,6 +142,7 @@ def run_game():
         answers = math_manager.answers_list(num_platforms)
 
         platform_data = list(zip(platforms_specs, answers))
+        #combines platforms with answers and it is shuffled in math manager answers list function
         
         for (x, w, h), answer_val in platform_data:
             correct = (answer_val == math_manager.correct_answer)
@@ -144,8 +151,8 @@ def run_game():
 
         return platform_list
 
-    def game_over_screen(screen, score, large_font, font, width, height):
-        nonlocal highscore
+    def game_over_screen(screen, score, time_survived, large_font, font, width, height):
+        nonlocal highscore, best_time
         screen.fill(black)
 
         game_over_text = large_font.render("Game Over", True, white)
@@ -154,17 +161,28 @@ def run_game():
         score_text = large_font.render(f"Final Score: {score}", True, white)
         screen.blit(score_text, (width // 2 - score_text.get_width() // 2, height // 4 + 80))
 
+        time_text = large_font.render(f"Time Survived: {time_survived:.2f}s", True, white)
+        screen.blit(time_text, (width // 2 - time_text.get_width() // 2, height // 4 + 120))
+
         # Check for new highscore
-        if not highscore or len(highscore) < 5 or score > min(highscore):
-            highscore.append(score)
-            highscore.sort(reverse=True)
-            highscore = highscore[:5]
+        if score > highscore:
+            highscore = score
             save_highscore(highscore)
-            highscore_text = large_font.render(f"New Highscore: {score}!", True, (255, 255, 0))  # Yellow for new highscore
+            highscore_text = large_font.render(f"New Highscore: {highscore}!", True, (255, 255, 0))  # Yellow for new highscore
         else:
-            highscore_text = large_font.render(f"Highscore: {highscore[0] if highscore else 0}", True, white)
+            highscore_text = large_font.render(f"Highscore: {highscore}", True, white)
         
         screen.blit(highscore_text, (width // 2 - highscore_text.get_width() // 2, height // 4 + 160))
+
+        # Check for new best time
+        if time_survived > best_time:
+            best_time = time_survived
+            save_time(int(best_time))
+            best_time_text = large_font.render(f"New Best Time: {best_time:.2f}s!", True, (255, 255, 0))
+        else:
+            best_time_text = large_font.render(f"Best Time: {best_time:.2f}s", True, white)
+        
+        screen.blit(best_time_text, (width // 2 - best_time_text.get_width() // 2, height // 4 + 200))
 
         restart_text = font.render("Press SPACE to Try Again", True, white)
         screen.blit(restart_text, (width // 2 - restart_text.get_width() // 2, height // 2 + 100))
@@ -189,6 +207,7 @@ def run_game():
         player_vel_y = 0
         player_vel_x = 0
         grounded = True
+        paused_time = 0
 
     def reset_game():
         nonlocal score, game_state, question_timer
@@ -226,8 +245,17 @@ def run_game():
 
         return menu_btn, resume_btn
 
+    def update_timer(survival_time):
+        nonlocal question_timer
+        current_time = pygame.time.get_ticks()
+        elapsed_time = (current_time - question_timer - paused_time) / 1000
+        return elapsed_time
+
+
     score = 0
     highscore = load_highscore()
+    best_time = load_time()
+    time_survived = 0
     math_manager = MathManager(max_number=10)
     platforms = generate_platforms(math_manager)
     game_state = playing_state
@@ -270,13 +298,16 @@ def run_game():
             # Pause button click handling
                 if game_state == playing_state and pause_rect.collidepoint(event.pos):
                     game_state = pause_state
-                    paused_time += pygame.time.get_ticks() - pause_start_time
+                    pause_start_time = pygame.time.get_ticks()
+                    # start tracking paused time when game is paused
             # Resume or Menu button click handling
                 elif game_state == pause_state:
                     menu_btn, resume_btn = pause_menu()
             #   Resume button   
                     if resume_btn.collidepoint(event.pos):
                         game_state = playing_state
+                        paused_time += pygame.time.get_ticks() - pause_start_time
+                         # update paused time so timer continues from where it left off
                     # Menu button
                     elif menu_btn.collidepoint(event.pos):
                         return 'menu'
@@ -291,51 +322,54 @@ def run_game():
 
             current_time = pygame.time.get_ticks()
             elapsed_time = (current_time - question_timer - paused_time) / 1000
+            elapsed_time = max(0, min(elapsed_time, time_limit))  # Cap elapsed time at time limit
+            
 
             if elapsed_time >= time_limit:
+                time_survived = (pygame.time.get_ticks() - start_time) / 1000
                 game_state = gameover_state
 
             for platform in platforms:
-              
+              # Check collision with platforms
                 if player_rect.colliderect(platform) and player_vel_y >= 0:
                     if prev_player_bottom <= platform.top:
-                        
                         if platform.correct:
-
                             pygame.mixer.Sound.play(this_sound)
                             pygame.mixer.music.stop()
-
-                            score += 10
-                            print(f"Correct! Score {score}")
-                            
-                            next_level() # Move to next level
-                            
-                            player_vel_y = -8
+                            score += 10    # Increase score
+                            next_level()   # Go to next level
+                            player_vel_y = -8  # Makes the player bounce slightly
                             grounded = False
-                        
                             break 
-                        
                         else:
-                            print("Game Over.")
+                            time_survived = (pygame.time.get_ticks() - start_time) / 1000 
+                            # time_survived calculation
+                            # Wrong answer - Game Over
                             game_state = gameover_state
+                            # game state changes to game over
                             pygame.mixer.Sound.play(jump_sound)
+                            # play wrong answer sound
                             pygame.mixer.music.stop()
-                            continue
-
-                    
-                    if prev_player_bottom <= platform.top:
+                            break # exit platform loop
+                    if prev_player_bottom <= platform.top: 
+                        # Check that the player landed on top
                         player_rect.bottom = platform.top 
-                        player_vel_y = 0
+                        player_vel_y = 0 
+                        # Stop vertical movement
                         grounded = True 
+                        # Player is on the platform
             
         
-            # Ground collision
+            
             if player_rect.bottom > floor_height:
+                # Ensure player doesn't fall below floor
                 player_rect.bottom = floor_height
+                # Aligns player with floor
                 player_vel_y = 0 
+                # Vertical velocity reset
                 grounded = True
         
-            # Screen bounds checks
+            
             if player_rect.left < 0:
                 player_rect.left = 0
                 player_vel_x = 0
@@ -343,23 +377,22 @@ def run_game():
                 player_rect.right = width
                 player_vel_x = 0
         
-            screen.fill(black)
-
-            # Draw elements
-            screen.blit(background, (0, 0))
-            screen.blit(pause_button, pause_rect)
-            
-            problem_text = font.render(math_manager.current_problem, True, white)
-            screen.blit(problem_text, (width // 2 - problem_text.get_width() // 2, 50))
-            
-            score_text = font.render(f"Score: {score}", True, white)
+            # Drawing all on screen elements 
+            screen.fill(black) # Clear the screen before redrawing
+            screen.blit(background, (0, 0)) # Draw background
+            screen.blit(pause_button, pause_rect) # Draw pause button
+            problem_text = font.render(math_manager.current_problem, True, white) # Render problem text 
+            screen.blit(problem_text, (width // 2 - problem_text.get_width() // 2, 50)) 
+            score_text = font.render(f"Score: {score}", True, white)  # Render score text
             screen.blit(score_text, (10, 10))
-           
-            highscore_text = font.render(f"Highscore: {highscore[0] if highscore else 0}", True, white)
+            highscore_text = font.render(f"Highscore: {highscore}", True, white) # render highscore text
             screen.blit(highscore_text, (10, 40))
            
+           # Calculate remaining time, ensure it doesn't go negative
             time_left = max(0, time_limit - elapsed_time)
+            # Render timer text
             timer_text = font.render(f"Time:{int(time_left)}", True, black)
+            # Centre the timer at the top
             timer_rect = timer_text.get_rect(center=(width // 2, 15))
             screen.blit(timer_text, timer_rect)
 
@@ -368,7 +401,8 @@ def run_game():
                 pygame.draw.rect(screen, white, platform)
 
                 answer_val_text = answer_font.render(str(platform.value), True, black)
-                screen.blit(answer_val_text, (platform.centerx - answer_val_text.get_width() // 2, platform.centery - answer_val_text.get_height() // 2))
+                screen.blit(answer_val_text, (platform.centerx - answer_val_text.get_width() // 2, 
+                platform.centery - answer_val_text.get_height() // 2))
 
             blit_rect = player_rect.copy()
             blit_rect.y += visual_offset
@@ -379,7 +413,7 @@ def run_game():
             pygame.display.flip()
 
         elif game_state == gameover_state: 
-            game_over_screen(screen, score, large_font, font, width, height)
+            game_over_screen(screen, score, time_survived, large_font, font, width, height)
 
         elif game_state == pause_state:
 
@@ -392,7 +426,7 @@ def run_game():
             score_text = font.render(f"Score: {score}", True, white)
             screen.blit(score_text, (10, 10))
 
-            highscore_text = font.render(f"Highscore: {highscore[0] if highscore else 0}", True, white)
+            highscore_text = font.render(f"Highscore: {highscore}", True, white)
             screen.blit(highscore_text, (10, 40))
 
             for platform in platforms:
