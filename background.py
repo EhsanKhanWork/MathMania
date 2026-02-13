@@ -2,12 +2,13 @@ import pygame
 import os
 
 def init_background(height):
+    # background that loops forever
     heli_img = pygame.image.load(
         os.path.join("assets", "helicopter.png")).convert_alpha()
     heli_img = pygame.transform.scale(heli_img, (300, 300))
 
     heli_rect = heli_img.get_rect(midleft=(-heli_img.get_width(), height // 2))
-    speed = 6
+    speed = 6 # can be tweaked for speed
 
     return heli_img, heli_rect, speed
 
@@ -15,8 +16,8 @@ def draw_background(screen, heli_img, heli_rect, speed, width):
     heli_rect.x += speed
     if heli_rect.left > width:
         heli_rect.right = 0
-
-    screen.fill((135, 206, 235))
+    # wrap around once it is fully off the screen
+    screen.fill((135, 206, 235)) # sky blue
     screen.blit(heli_img, heli_rect)
 
 

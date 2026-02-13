@@ -1,0 +1,125 @@
+class MathManager
+    private max_number
+    private current_problem
+    private correct_answer
+
+    public procedure new(pMaxNumber)
+        max_number = pMaxNumber
+        current_problem = ''
+        correct_answer = 0
+        generate_problem()
+    endprocedure
+
+    public procedure generate_problem
+        num1 = random.integer(1, max_number)
+        num2 = random.integer(1, max_number)
+    endprocedure
+
+        if operation == '+' then
+            correct_answer = num1 + num2
+            current_problem = 'What is{num1} + {num2}'
+        elseif operation == '-' then
+            num1 > num2             
+            # make the first number larger than second number
+            # to eliminate negative answers
+            correct_answer = num1 - num2
+            displayed_problem = 'What is {num1} - {num2}'
+        elseif operation == '*'
+            correct_answer = num1 * num2
+            num1 > num2
+            current_problem = 'What is {num1} x {num2}'
+        elseif operation == '/'
+            correct_answer = num1 / num2
+            current_problem = 'What is {num1} / {num2}?'
+        endif
+    
+    function generateDistractors(numDistractors)
+        distractors = []
+        while distractors.length < numDistractors 
+            offset = [3, 2, 1, -1, -2, -3]
+            distract = correct_answer + offset(0, 5)
+
+            if distract > 0 and d != correct_answer then
+                if not distractors contains distract then
+                    distractors.add
+                endif
+            endif
+        endwhile
+        return distractors
+    endfunction
+
+    function generatePlatforms(MathManager, num_platform)
+        platformList = []
+        platform_y = 550
+
+        platformSpecs = [[x, y, z], [x, y, z], [x, y, z]]
+
+        answers = MathManager.answers_list(num_platform) // 2
+
+        for i = 0 to (num_platforms)
+            x = platformSpecs[i, 0]
+            w = platformSpecs[i, 1]
+            h = platformSpecs[i, 2]
+        
+            if answer_val == MathManager.correct_answer then
+                correct = True
+            else
+                correct = False
+            endif
+            new_platform = new platform(x, platform_y, w, h, answer_val, correct)
+            platformList.add(new_platform)
+        next i
+        return platformList
+    endfunction
+
+    class Input
+    
+    class Input
+    PRIVATE rect_x, rect_y, rect_w, rect_h
+    PRIVATE text
+    PRIVATE active
+    priv placeholder
+
+    PUBLIC PROCEDURE NEW(pX, pY, pW, pH, pPlaceholder)
+        rect_x = pX
+        rect_y = pY
+        rect_w = pW
+        rect_h = pH
+        text = ""
+        placeholder = pPlaceholder
+        active = FALSE // (1)
+    ENDPROCEDURE
+
+    public procedure handle_event(event_type, event_pos, event_key, event_unicode)
+      
+        if event_type is mousebuttondown then
+            if event_pos_x >= rect_x AND event_pos_x <= (rect_x + rect_w) and 
+               event_pos_y >= rect_y AND event_pos_y <= (rect_y + rect_h) then
+                active = True
+            else
+                active = False
+            endif
+        endif
+
+        IF event_type == "keydown" and active == true then // (2)
+            IF event_key == "backspace" then
+                // String slicing to remove last character
+                text = text.substring(0, text.length - 1)
+            else
+                text = text + event_unicode // (3)
+            endif
+        endif
+    endprocedure
+
+    PUBLIC PROCEDURE draw(screen)
+        // Pseudocode for rendering the box and text
+        IF text == "" THEN
+            display_text = placeholder
+        ELSE
+            display_text = text
+        ENDIF
+        
+        DRAW_RECTANGLE(rect_x, rect_y, rect_w, rect_h)
+        DISPLAY(display_text, rect_x + 5, rect_y + 5)
+    ENDPROCEDURE
+ENDCLASS
